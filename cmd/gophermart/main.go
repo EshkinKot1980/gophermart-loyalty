@@ -10,9 +10,11 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/api"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/config"
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/logger"
 )
 
 func main() {
@@ -31,11 +33,22 @@ func run(cfg *config.Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to get a new migrate instance: %w", err)
 	}
-	m.Up() // TODO: как только в появятся миграции включить обработку ошибок
-	// if err := m.Up(); err != nil {
-	// 	return fmt.Errorf("failed to apply migrations to the DB: %w", err)
-	// }
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("failed to apply migrations to the DB: %w", err)
+	}
 
-	httpServer := api.NewApp(cfg)
+	dbPool, err := pgxpool.New(ctx, cfg.DatabaseDSN)
+	if err != nil {
+		return fmt.Errorf("failed to create DB a connection pool: %w", err)
+	}
+	defer dbPool.Close()
+
+	logger, err := logger.New()
+	if err != nil {
+		return fmt.Errorf("failed to init logger: %w", err)
+	}
+	defer logger.Sync()
+
+	httpServer := api.NewApp(cfg, dbPool, logger)
 	return httpServer.Run(ctx)
 }

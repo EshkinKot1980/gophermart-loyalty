@@ -6,17 +6,24 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/api/router"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/config"
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/logger"
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/user"
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/service/auth"
 )
 
 type App struct {
 	router http.Handler
 	config *config.Config
+	logger *logger.Logger
+	dbPool *pgxpool.Pool
 }
 
-func NewApp(cfg *config.Config) *App {
-	app := App{config: cfg}
+func NewApp(c *config.Config, p *pgxpool.Pool, l *logger.Logger) *App {
+	app := App{config: c, dbPool: p, logger: l}
 	app.initRouter()
 
 	return &app
@@ -52,5 +59,8 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func (a *App) initRouter() {
-	a.router = router.New()
+	userRepository := user.New(a.dbPool)
+	authService := auth.New(userRepository, a.logger)
+
+	a.router = router.New(authService, a.logger)
 }
