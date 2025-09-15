@@ -17,7 +17,7 @@ func New(p *pgxpool.Pool) *User {
 	return &User{pool: p}
 }
 
-func (u *User) GetById(ctx context.Context, id uint64) (entity.User, error) {
+func (u *User) GetByID(ctx context.Context, id uint64) (entity.User, error) {
 	var user entity.User
 	query := `SELECT id, login, hash, created_at FROM users WHERE id = $1`
 	row := u.pool.QueryRow(ctx, query, id)

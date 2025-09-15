@@ -8,10 +8,14 @@ import (
 )
 
 type Logger = middleware.HTTPloger
-type AuthService = auth.AuthService
+type AuthService interface {
+	auth.AuthService
+	middleware.AuthService
+}
 
 func New(a AuthService, l Logger) *chi.Mux {
 	mwLogger := middleware.NewLogger(l)
+	// mwAuth := middleware.NewAuthorizer(a)
 
 	authHandler := auth.New(a)
 

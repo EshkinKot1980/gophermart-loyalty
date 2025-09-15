@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -75,9 +76,9 @@ func (a *Auth) Login(ctx context.Context, c dto.Credentials) (token string, err 
 func (a *Auth) generateToken(u entity.User) (string, error) {
 	token := jwt.NewWithClaims(
 		jwt.SigningMethodHS256,
-		jwt.MapClaims{
-			"id":  u.ID,
-			"exp": time.Now().Add(time.Hour * 24).Unix(),
+		jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
+			ID:        strconv.FormatUint(u.ID, 10),
 		},
 	)
 
