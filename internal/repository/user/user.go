@@ -2,7 +2,6 @@ package user
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -18,18 +17,40 @@ func New(p *pgxpool.Pool) *User {
 	return &User{pool: p}
 }
 
-func (u *User) Create(ctx context.Context, user entity.User) error {
-	query := `INSERT INTO users (login, hash) VALUES($1, $2)`
-	tag, err := u.pool.Exec(ctx, query, user.Login, user.Hash)
+func (u *User) GetById(ctx context.Context, id uint64) (entity.User, error) {
+	var user entity.User
+	query := `SELECT id, login, hash, created_at FROM users WHERE id = $1`
+	row := u.pool.QueryRow(ctx, query, id)
 
+	err := row.Scan(&user.ID, &user.Login, &user.Hash, &user.Created)
 	if err != nil {
-		return fmt.Errorf("failed to create user: %w", errors.Trasform(err))
+		return entity.User{}, errors.Trasform(err)
 	}
 
-	rowsAffectedCount := tag.RowsAffected()
-	if rowsAffectedCount != 1 {
-		return fmt.Errorf("expected one row to be affected, actually affected %d", rowsAffectedCount)
+	return user, nil
+}
+
+func (u *User) Create(ctx context.Context, user entity.User) (entity.User, error) {
+	query := `INSERT INTO users (login, hash) VALUES($1, $2) RETURNING id, created_at`
+	row := u.pool.QueryRow(ctx, query, user.Login, user.Hash)
+
+	err := row.Scan(&user.ID, &user.Created)
+	if err != nil {
+		return user, errors.Trasform(err)
 	}
 
-	return nil
+	return user, nil
+}
+
+func (u *User) FindByLogin(ctx context.Context, login string) (entity.User, error) {
+	var user entity.User
+	query := `SELECT id, login, hash, created_at FROM users WHERE login = $1`
+	row := u.pool.QueryRow(ctx, query, login)
+
+	err := row.Scan(&user.ID, &user.Login, &user.Hash, &user.Created)
+	if err != nil {
+		return entity.User{}, errors.Trasform(err)
+	}
+
+	return user, nil
 }

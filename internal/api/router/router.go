@@ -11,7 +11,7 @@ type Logger = middleware.HTTPloger
 type AuthService = auth.AuthService
 
 func New(a AuthService, l Logger) *chi.Mux {
-	mwLogger := middleware.NewLogWraper(l)
+	mwLogger := middleware.NewLogger(l)
 
 	authHandler := auth.New(a)
 
@@ -19,7 +19,12 @@ func New(a AuthService, l Logger) *chi.Mux {
 	router.Use(mwLogger.Log)
 
 	router.Route("/api/user", func(r chi.Router) {
-		r.Post("/register", authHandler.Register)
+		r.Route("/register", func(r chi.Router) {
+			r.Post("/", authHandler.Register)
+		})
+		r.Route("/login", func(r chi.Router) {
+			r.Post("/", authHandler.Login)
+		})
 	})
 
 	return router

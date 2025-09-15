@@ -60,7 +60,7 @@ func (a *App) Run(ctx context.Context) error {
 
 func (a *App) initRouter() {
 	userRepository := user.New(a.dbPool)
-	authService := auth.New(userRepository, a.logger)
+	authService := auth.New(userRepository, a.logger, a.config.JWTsecret)
 
 	a.router = router.New(authService, a.logger)
 }

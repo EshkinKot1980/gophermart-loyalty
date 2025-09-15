@@ -12,7 +12,7 @@ import (
 
 func TestLogger(t *testing.T) {
 	lm := makeLoggerMock(t)
-	mw := NewLogWraper(lm)
+	mw := NewLogger(lm)
 	next := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		io.WriteString(w, "four")

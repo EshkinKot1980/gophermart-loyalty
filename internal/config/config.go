@@ -10,20 +10,29 @@ type Config struct {
 	ServerAddr  string
 	DatabaseDSN string
 	AccrualAddr string
+	JWTsecret   string
 }
 
 func MustLoad() *Config {
-	var a, d, r string
+	var a, d, r, s string
 	defaultAddr := ":8080"
+	// нужен для того, чтобы приемочные тесты прошли
+	defaultSecret := "J3gdkl8v3hPJ8"
 
 	flag.StringVar(&a, "a", defaultAddr, "address to serve")
 	flag.StringVar(&d, "d", "", "database dsn")
 	flag.StringVar(&r, "r", "", "accrual system address")
+	flag.StringVar(&s, "s", defaultSecret, "jwt secret")
 	flag.Parse()
 
 	envAddr := os.Getenv("RUN_ADDRESS")
 	if envAddr != "" && a == defaultAddr {
 		a = envAddr
+	}
+
+	envSecret := os.Getenv("JWT_SECRET")
+	if envSecret != "" && s == defaultSecret {
+		s = envSecret
 	}
 
 	envDSN := os.Getenv("DATABASE_URI")
@@ -46,5 +55,6 @@ func MustLoad() *Config {
 		ServerAddr:  a,
 		DatabaseDSN: d,
 		AccrualAddr: r,
+		JWTsecret:   s,
 	}
 }

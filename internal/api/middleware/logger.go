@@ -18,7 +18,7 @@ type HTTPloger interface {
 	RequestInfo(message string, req *requestData, resp *responseData)
 }
 
-func NewLogWraper(l HTTPloger) *Logger {
+func NewLogger(l HTTPloger) *Logger {
 	return &Logger{logger: l}
 }
 
