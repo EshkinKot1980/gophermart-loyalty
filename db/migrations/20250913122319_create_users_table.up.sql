@@ -1,0 +1,12 @@
+BEGIN TRANSACTION;
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    login VARCHAR(64) NOT NULL UNIQUE,
+    hash VARCHAR(60) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE users IS 'Stores users for auth.';
+COMMENT ON COLUMN users.hash IS 'Password hash with salt.';
+
+COMMIT;
