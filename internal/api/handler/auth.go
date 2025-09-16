@@ -1,4 +1,4 @@
-package auth
+package handler
 
 import (
 	"context"
@@ -19,7 +19,7 @@ type Auth struct {
 	service AuthService
 }
 
-func New(srv AuthService) *Auth {
+func NewAuth(srv AuthService) *Auth {
 	return &Auth{service: srv}
 }
 
@@ -34,9 +34,9 @@ func (h *Auth) Register(w http.ResponseWriter, r *http.Request) {
 	token, err := h.service.Register(r.Context(), credentials)
 	if err != nil {
 		switch {
-		case errors.Is(err, srvErrors.ErrInvalidCredentials):
+		case errors.Is(err, srvErrors.ErrAuthInvalidCredentials):
 			http.Error(w, err.Error(), http.StatusBadRequest)
-		case errors.Is(err, srvErrors.ErrUserAlreadyExists):
+		case errors.Is(err, srvErrors.ErrAuthUserAlreadyExists):
 			http.Error(w, err.Error(), http.StatusConflict)
 		default:
 			http.Error(w, "oops, something went wrong", http.StatusInternalServerError)
@@ -59,7 +59,7 @@ func (h *Auth) Login(w http.ResponseWriter, r *http.Request) {
 
 	token, err := h.service.Login(r.Context(), credentials)
 	if err != nil {
-		if errors.Is(err, srvErrors.ErrInvalidCredentials) {
+		if errors.Is(err, srvErrors.ErrAuthInvalidCredentials) {
 			http.Error(w, "", http.StatusUnauthorized)
 		} else {
 			http.Error(w, "oops, something went wrong", http.StatusInternalServerError)

@@ -37,7 +37,7 @@ func (a *Authorizer) Authorize(next http.Handler) http.Handler {
 		token := strings.TrimPrefix(header, "Bearer ")
 		user, err := a.service.User(r.Context(), token)
 		if err != nil {
-			if errors.Is(err, srvErrors.ErrTokenExpired) {
+			if errors.Is(err, srvErrors.ErrAuthTokenExpired) {
 				http.Error(w, "token expired", http.StatusUnauthorized)
 			} else {
 				http.Error(w, "", http.StatusUnauthorized)

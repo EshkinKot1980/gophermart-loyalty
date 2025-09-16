@@ -3,9 +3,12 @@ package errors
 import "errors"
 
 var (
-	ErrUnexpected         = errors.New("unexpected error")
-	ErrUserAlreadyExists  = errors.New("user already exists")
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrInvalidToken       = errors.New("invalid token")
-	ErrTokenExpired       = errors.New("token expired")
+	ErrUnexpected                 = errors.New("unexpected error")
+	ErrAuthUserAlreadyExists      = errors.New("user already exists")
+	ErrAuthInvalidCredentials     = errors.New("invalid credentials")
+	ErrAuthInvalidToken           = errors.New("invalid token")
+	ErrAuthTokenExpired           = errors.New("token expired")
+	ErrOrderUploadedByUser        = errors.New("order already uploaded by user")
+	ErrOrderUploadedByAnotherUser = errors.New("order already uploaded by another user")
+	ErrOrderInvalidNumber         = errors.New("invalid order number")
 )

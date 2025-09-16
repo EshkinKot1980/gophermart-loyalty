@@ -1,4 +1,4 @@
-package auth
+package service
 
 import (
 	"context"
@@ -17,6 +17,22 @@ import (
 	srvErrors "github.com/EshkinKot1980/gophermart-loyalty/internal/service/errors"
 )
 
+type UserRepository interface {
+	Create(ctx context.Context, user entity.User) (entity.User, error)
+	FindByLogin(ctx context.Context, login string) (entity.User, error)
+	GetByID(ctx context.Context, id uint64) (entity.User, error)
+}
+
+type Auth struct {
+	repository UserRepository
+	logger     Logger
+	secret     string
+}
+
+func NewAuth(r UserRepository, l Logger, jwtSecret string) *Auth {
+	return &Auth{repository: r, logger: l, secret: jwtSecret}
+}
+
 func (a *Auth) Register(ctx context.Context, c dto.Credentials) (token string, err error) {
 	cr := trimCredentials(c)
 	if err := validateCredentials(cr); err != nil {
@@ -28,7 +44,7 @@ func (a *Auth) Register(ctx context.Context, c dto.Credentials) (token string, e
 	if err != nil {
 		switch {
 		case errors.Is(err, bcrypt.ErrPasswordTooLong):
-			err = fmt.Errorf("%w: password too long, max 72 bytes", srvErrors.ErrInvalidCredentials)
+			err = fmt.Errorf("%w: password too long, max 72 bytes", srvErrors.ErrAuthInvalidCredentials)
 			return token, err
 		default:
 			a.logger.Error("failed to hash password", err)
@@ -42,7 +58,7 @@ func (a *Auth) Register(ctx context.Context, c dto.Credentials) (token string, e
 	if err != nil {
 		switch {
 		case errors.Is(err, repErrors.ErrDuplicateKey):
-			return token, srvErrors.ErrUserAlreadyExists
+			return token, srvErrors.ErrAuthUserAlreadyExists
 		default:
 			a.logger.Error("failed to create user", err)
 			return token, srvErrors.ErrUnexpected
@@ -58,7 +74,7 @@ func (a *Auth) Login(ctx context.Context, c dto.Credentials) (token string, err 
 	user, err := a.repository.FindByLogin(ctx, cr.Login)
 	if err != nil {
 		if errors.Is(err, repErrors.ErrNotFound) {
-			return token, srvErrors.ErrInvalidCredentials
+			return token, srvErrors.ErrAuthInvalidCredentials
 		} else {
 			a.logger.Error("failed to find user", err)
 			return token, srvErrors.ErrUnexpected
@@ -67,10 +83,61 @@ func (a *Auth) Login(ctx context.Context, c dto.Credentials) (token string, err 
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Hash), []byte(cr.Password))
 	if err != nil {
-		return token, srvErrors.ErrInvalidCredentials
+		return token, srvErrors.ErrAuthInvalidCredentials
 	}
 
 	return a.generateToken(user)
+}
+
+func (a *Auth) User(ctx context.Context, token string) (entity.User, error) {
+	var user entity.User
+
+	jt, err := jwt.Parse(
+		token,
+		func(t *jwt.Token) (any, error) {
+			return []byte(a.secret), nil
+		},
+	)
+
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return user, srvErrors.ErrAuthTokenExpired
+		}
+		return user, srvErrors.ErrAuthInvalidToken
+	}
+
+	userID, err := parseID(jt)
+	if err != nil {
+		return user, srvErrors.ErrAuthInvalidToken
+	}
+
+	user, err = a.repository.GetByID(ctx, userID)
+	if err != nil {
+		return user, srvErrors.ErrAuthInvalidToken
+	}
+
+	return user, nil
+}
+
+func parseID(token *jwt.Token) (uint64, error) {
+	var id uint64
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return id, srvErrors.ErrAuthInvalidToken
+	}
+
+	jti, ok := claims["jti"].(string)
+	if !ok {
+		return id, srvErrors.ErrAuthInvalidToken
+	}
+
+	id, err := strconv.ParseUint(jti, 10, 64)
+	if err != nil {
+		return id, srvErrors.ErrAuthInvalidToken
+	}
+
+	return id, nil
 }
 
 func (a *Auth) generateToken(u entity.User) (string, error) {
@@ -100,17 +167,17 @@ func trimCredentials(c dto.Credentials) dto.Credentials {
 
 func validateCredentials(c dto.Credentials) error {
 	if c.Login == "" {
-		return fmt.Errorf("%w: login is empty", srvErrors.ErrInvalidCredentials)
+		return fmt.Errorf("%w: login is empty", srvErrors.ErrAuthInvalidCredentials)
 	}
 
 	if c.Password == "" {
-		return fmt.Errorf("%w: password is empty", srvErrors.ErrInvalidCredentials)
+		return fmt.Errorf("%w: password is empty", srvErrors.ErrAuthInvalidCredentials)
 	}
 
 	if len(c.Login) > entity.UserMaxLoginLen {
 		return fmt.Errorf(
 			"%w: password too long, max %d characters",
-			srvErrors.ErrInvalidCredentials,
+			srvErrors.ErrAuthInvalidCredentials,
 			entity.UserMaxLoginLen,
 		)
 	}
