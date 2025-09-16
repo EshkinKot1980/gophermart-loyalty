@@ -11,8 +11,10 @@ import (
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/api/router"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/config"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/logger"
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/order"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/user"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/service/auth"
+	orderSrv "github.com/EshkinKot1980/gophermart-loyalty/internal/service/order"
 )
 
 type App struct {
@@ -61,6 +63,8 @@ func (a *App) Run(ctx context.Context) error {
 func (a *App) initRouter() {
 	userRepository := user.New(a.dbPool)
 	authService := auth.New(userRepository, a.logger, a.config.JWTsecret)
+	orderRepository := order.New(a.dbPool)
+	orderService := orderSrv.New(orderRepository, a.logger)
 
-	a.router = router.New(authService, a.logger)
+	a.router = router.New(authService, orderService, a.logger)
 }

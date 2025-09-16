@@ -28,7 +28,7 @@ func (a *Auth) Register(ctx context.Context, c dto.Credentials) (token string, e
 	if err != nil {
 		switch {
 		case errors.Is(err, bcrypt.ErrPasswordTooLong):
-			err = fmt.Errorf("%w: password too long, max 72 bytes", srvErrors.ErrInvalidCredentials)
+			err = fmt.Errorf("%w: password too long, max 72 bytes", srvErrors.ErrAuthInvalidCredentials)
 			return token, err
 		default:
 			a.logger.Error("failed to hash password", err)
@@ -42,7 +42,7 @@ func (a *Auth) Register(ctx context.Context, c dto.Credentials) (token string, e
 	if err != nil {
 		switch {
 		case errors.Is(err, repErrors.ErrDuplicateKey):
-			return token, srvErrors.ErrUserAlreadyExists
+			return token, srvErrors.ErrAuthUserAlreadyExists
 		default:
 			a.logger.Error("failed to create user", err)
 			return token, srvErrors.ErrUnexpected
@@ -58,7 +58,7 @@ func (a *Auth) Login(ctx context.Context, c dto.Credentials) (token string, err 
 	user, err := a.repository.FindByLogin(ctx, cr.Login)
 	if err != nil {
 		if errors.Is(err, repErrors.ErrNotFound) {
-			return token, srvErrors.ErrInvalidCredentials
+			return token, srvErrors.ErrAuthInvalidCredentials
 		} else {
 			a.logger.Error("failed to find user", err)
 			return token, srvErrors.ErrUnexpected
@@ -67,7 +67,7 @@ func (a *Auth) Login(ctx context.Context, c dto.Credentials) (token string, err 
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Hash), []byte(cr.Password))
 	if err != nil {
-		return token, srvErrors.ErrInvalidCredentials
+		return token, srvErrors.ErrAuthInvalidCredentials
 	}
 
 	return a.generateToken(user)
@@ -100,17 +100,17 @@ func trimCredentials(c dto.Credentials) dto.Credentials {
 
 func validateCredentials(c dto.Credentials) error {
 	if c.Login == "" {
-		return fmt.Errorf("%w: login is empty", srvErrors.ErrInvalidCredentials)
+		return fmt.Errorf("%w: login is empty", srvErrors.ErrAuthInvalidCredentials)
 	}
 
 	if c.Password == "" {
-		return fmt.Errorf("%w: password is empty", srvErrors.ErrInvalidCredentials)
+		return fmt.Errorf("%w: password is empty", srvErrors.ErrAuthInvalidCredentials)
 	}
 
 	if len(c.Login) > entity.UserMaxLoginLen {
 		return fmt.Errorf(
 			"%w: password too long, max %d characters",
-			srvErrors.ErrInvalidCredentials,
+			srvErrors.ErrAuthInvalidCredentials,
 			entity.UserMaxLoginLen,
 		)
 	}
