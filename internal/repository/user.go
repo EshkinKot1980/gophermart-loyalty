@@ -1,4 +1,4 @@
-package user
+package repository
 
 import (
 	"context"
@@ -13,7 +13,7 @@ type User struct {
 	pool *pgxpool.Pool
 }
 
-func New(p *pgxpool.Pool) *User {
+func NewUser(p *pgxpool.Pool) *User {
 	return &User{pool: p}
 }
 

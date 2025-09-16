@@ -1,4 +1,4 @@
-package auth
+package service
 
 import (
 	"context"
@@ -16,6 +16,22 @@ import (
 	repErrors "github.com/EshkinKot1980/gophermart-loyalty/internal/repository/errors"
 	srvErrors "github.com/EshkinKot1980/gophermart-loyalty/internal/service/errors"
 )
+
+type UserRepository interface {
+	Create(ctx context.Context, user entity.User) (entity.User, error)
+	FindByLogin(ctx context.Context, login string) (entity.User, error)
+	GetByID(ctx context.Context, id uint64) (entity.User, error)
+}
+
+type Auth struct {
+	repository UserRepository
+	logger     Logger
+	secret     string
+}
+
+func NewAuth(r UserRepository, l Logger, jwtSecret string) *Auth {
+	return &Auth{repository: r, logger: l, secret: jwtSecret}
+}
 
 func (a *Auth) Register(ctx context.Context, c dto.Credentials) (token string, err error) {
 	cr := trimCredentials(c)
@@ -71,6 +87,57 @@ func (a *Auth) Login(ctx context.Context, c dto.Credentials) (token string, err 
 	}
 
 	return a.generateToken(user)
+}
+
+func (a *Auth) User(ctx context.Context, token string) (entity.User, error) {
+	var user entity.User
+
+	jt, err := jwt.Parse(
+		token,
+		func(t *jwt.Token) (any, error) {
+			return []byte(a.secret), nil
+		},
+	)
+
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return user, srvErrors.ErrAuthTokenExpired
+		}
+		return user, srvErrors.ErrAuthInvalidToken
+	}
+
+	userID, err := parseID(jt)
+	if err != nil {
+		return user, srvErrors.ErrAuthInvalidToken
+	}
+
+	user, err = a.repository.GetByID(ctx, userID)
+	if err != nil {
+		return user, srvErrors.ErrAuthInvalidToken
+	}
+
+	return user, nil
+}
+
+func parseID(token *jwt.Token) (uint64, error) {
+	var id uint64
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return id, srvErrors.ErrAuthInvalidToken
+	}
+
+	jti, ok := claims["jti"].(string)
+	if !ok {
+		return id, srvErrors.ErrAuthInvalidToken
+	}
+
+	id, err := strconv.ParseUint(jti, 10, 64)
+	if err != nil {
+		return id, srvErrors.ErrAuthInvalidToken
+	}
+
+	return id, nil
 }
 
 func (a *Auth) generateToken(u entity.User) (string, error) {

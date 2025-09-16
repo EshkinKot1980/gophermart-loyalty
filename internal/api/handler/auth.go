@@ -1,4 +1,4 @@
-package auth
+package handler
 
 import (
 	"context"
@@ -19,7 +19,7 @@ type Auth struct {
 	service AuthService
 }
 
-func New(srv AuthService) *Auth {
+func NewAuth(srv AuthService) *Auth {
 	return &Auth{service: srv}
 }
 

@@ -1,4 +1,4 @@
-package order
+package service
 
 import (
 	"context"
@@ -16,16 +16,12 @@ type OrderRepository interface {
 	Create(ctx context.Context, order entity.Order) error
 }
 
-type Logger interface {
-	Error(message string, err error)
-}
-
 type Order struct {
 	repository OrderRepository
 	logger     Logger
 }
 
-func New(r OrderRepository, l Logger) *Order {
+func NewOrder(r OrderRepository, l Logger) *Order {
 	return &Order{repository: r, logger: l}
 }
 

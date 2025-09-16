@@ -1,4 +1,4 @@
-package order
+package repository
 
 import (
 	"context"
@@ -13,7 +13,7 @@ type Order struct {
 	pool *pgxpool.Pool
 }
 
-func New(p *pgxpool.Pool) *Order {
+func NewOrder(p *pgxpool.Pool) *Order {
 	return &Order{pool: p}
 }
 

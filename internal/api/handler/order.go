@@ -1,4 +1,4 @@
-package order
+package handler
 
 import (
 	"context"
@@ -19,7 +19,7 @@ type Order struct {
 	service OrderService
 }
 
-func New(srv OrderService) *Order {
+func NewOrder(srv OrderService) *Order {
 	return &Order{service: srv}
 }
 
