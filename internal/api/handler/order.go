@@ -2,25 +2,33 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/api/dto"
 	srvErrors "github.com/EshkinKot1980/gophermart-loyalty/internal/service/errors"
 )
 
+type Logger interface {
+	Error(message string, err error)
+}
+
 type OrderService interface {
 	Upload(ctx context.Context, orderNumber string) error
+	List(ctx context.Context) ([]dto.Order, error)
 }
 
 type Order struct {
 	service OrderService
+	logger  Logger
 }
 
-func NewOrder(srv OrderService) *Order {
-	return &Order{service: srv}
+func NewOrder(srv OrderService, l Logger) *Order {
+	return &Order{service: srv, logger: l}
 }
 
 func (o *Order) Create(w http.ResponseWriter, r *http.Request) {
@@ -49,5 +57,31 @@ func (o *Order) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid order number", http.StatusUnprocessableEntity)
 	default:
 		http.Error(w, "oops, something went wrong", http.StatusInternalServerError)
+	}
+}
+
+func (o *Order) List(w http.ResponseWriter, r *http.Request) {
+	orders, err := o.service.List(r.Context())
+	if err != nil {
+		http.Error(w, "oops, something went wrong", http.StatusInternalServerError)
+	}
+
+	if len(orders) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	body, err := json.Marshal(orders)
+	if err != nil {
+		o.logger.Error("failed to encode orders to json", err)
+		http.Error(w, "oops, something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write([]byte(body))
+	if err != nil {
+		o.logger.Error("failed to write body", err)
 	}
 }

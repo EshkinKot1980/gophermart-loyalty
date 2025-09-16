@@ -10,10 +10,10 @@ const (
 )
 
 type Order struct {
-	Number   string
-	UserID   uint64
-	Status   string
-	Accrual  *float64
-	Uploaded time.Time
-	Updated  time.Time
+	Number   string    `db:"number"`
+	UserID   uint64    `db:"user_id"`
+	Status   string    `db:"status"`
+	Accrual  float64   `db:"accrual"`
+	Uploaded time.Time `db:"uploaded_at"`
+	Updated  time.Time `db:"updated_at"`
 }

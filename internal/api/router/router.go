@@ -7,7 +7,10 @@ import (
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/api/middleware"
 )
 
-type Logger = middleware.HTTPloger
+type Logger interface {
+	middleware.HTTPloger
+	handler.Logger
+}
 type AuthService interface {
 	handler.AuthService
 	middleware.AuthService
@@ -19,7 +22,7 @@ func New(a AuthService, o OrderService, l Logger) *chi.Mux {
 	authorizer := middleware.NewAuthorizer(a)
 
 	authHandler := handler.NewAuth(a)
-	orderHandler := handler.NewOrder(o)
+	orderHandler := handler.NewOrder(o, l)
 
 	router := chi.NewRouter()
 	router.Use(logger.Log)
@@ -37,6 +40,7 @@ func New(a AuthService, o OrderService, l Logger) *chi.Mux {
 
 			r.Route("/orders", func(r chi.Router) {
 				r.Post("/", orderHandler.Create)
+				r.Get("/", orderHandler.List)
 			})
 		})
 	})
