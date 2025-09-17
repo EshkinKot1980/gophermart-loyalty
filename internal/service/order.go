@@ -62,7 +62,7 @@ func (o *Order) List(ctx context.Context) ([]dto.Order, error) {
 
 	orders, err := o.repository.GetAllByUser(ctx, userID)
 	if err != nil {
-		o.logger.Error("failed to upload order", err)
+		o.logger.Error("failed to get order user orders", err)
 		return list, srvErrors.ErrUnexpected
 	}
 

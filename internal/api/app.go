@@ -63,6 +63,8 @@ func (a *App) initRouter() {
 	authService := service.NewAuth(userRepository, a.logger, a.config.JWTsecret)
 	orderRepository := repository.NewOrder(a.dbPool)
 	orderService := service.NewOrder(orderRepository, a.logger)
+	balanceRepository := repository.NewBalance(a.dbPool)
+	balanceService := service.NewBalance(balanceRepository, a.logger)
 
-	a.router = router.New(authService, orderService, a.logger)
+	a.router = router.New(authService, orderService, balanceService, a.logger)
 }

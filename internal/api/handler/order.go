@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -12,10 +11,6 @@ import (
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/api/dto"
 	srvErrors "github.com/EshkinKot1980/gophermart-loyalty/internal/service/errors"
 )
-
-type Logger interface {
-	Error(message string, err error)
-}
 
 type OrderService interface {
 	Upload(ctx context.Context, orderNumber string) error
@@ -71,17 +66,5 @@ func (o *Order) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := json.Marshal(orders)
-	if err != nil {
-		o.logger.Error("failed to encode orders to json", err)
-		http.Error(w, "oops, something went wrong", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, err = w.Write([]byte(body))
-	if err != nil {
-		o.logger.Error("failed to write body", err)
-	}
+	writeJSON(orders, "orders", http.StatusOK, w, o.logger)
 }
