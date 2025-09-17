@@ -19,7 +19,7 @@ func NewBalance(p *pgxpool.Pool) *Balance {
 
 func (b *Balance) GetByUser(ctx context.Context, userID uint64) (entity.Balance, error) {
 	var balance entity.Balance
-	query := `SELECT user_id, balance, debited FROM balance WHERE user_id = $1`
+	query := `SELECT user_id, balance, debited FROM balance WHERE user_id = $1 FOR UPDATE`
 	row := b.pool.QueryRow(ctx, query, userID)
 
 	err := row.Scan(&balance.UserID, &balance.Balance, &balance.Debited)

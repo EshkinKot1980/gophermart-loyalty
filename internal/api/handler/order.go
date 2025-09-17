@@ -66,5 +66,5 @@ func (o *Order) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(orders, "orders", http.StatusOK, w, o.logger)
+	newJSONwriter(w, o.logger).write(orders, "orders", http.StatusOK)
 }

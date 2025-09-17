@@ -47,13 +47,9 @@ func (u *User) FindByLogin(ctx context.Context, login string) (entity.User, erro
 func (u *User) Create(ctx context.Context, user entity.User) (entity.User, error) {
 	tx, err := u.pool.Begin(ctx)
 	if err != nil {
-		return user, fmt.Errorf("failed to begin transaction: %w", errors.Trasform(err))
+		return user, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer func() {
-		if tx != nil {
-			tx.Rollback(ctx)
-		}
-	}()
+	defer tx.Rollback(ctx)
 
 	query := `INSERT INTO users (login, hash) VALUES($1, $2) RETURNING id, created_at`
 	row := tx.QueryRow(ctx, query, user.Login, user.Hash)
@@ -65,11 +61,11 @@ func (u *User) Create(ctx context.Context, user entity.User) (entity.User, error
 	query = `INSERT INTO balance (user_id) VALUES($1)`
 	_, err = tx.Exec(ctx, query, user.ID)
 	if err != nil {
-		return user, fmt.Errorf("failed to create user balance: %w", errors.Trasform(err))
+		return user, fmt.Errorf("failed to create user balance: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return user, fmt.Errorf("failed to commit transaction: %w", errors.Trasform(err))
+		return user, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return user, nil

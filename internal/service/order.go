@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"strconv"
 
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/api/dto"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/api/middleware"
@@ -51,9 +50,7 @@ func (o *Order) Upload(ctx context.Context, orderNumber string) error {
 	return srvErrors.ErrUnexpected
 }
 
-func (o *Order) List(ctx context.Context) ([]dto.Order, error) {
-	var list []dto.Order
-
+func (o *Order) List(ctx context.Context) (list []dto.Order, err error) {
 	userID, ok := ctx.Value(middleware.KeyUserID).(uint64)
 	if !ok {
 		o.logger.Error("failed to get user id", srvErrors.ErrUnexpected)
@@ -62,7 +59,7 @@ func (o *Order) List(ctx context.Context) ([]dto.Order, error) {
 
 	orders, err := o.repository.GetAllByUser(ctx, userID)
 	if err != nil {
-		o.logger.Error("failed to get order user orders", err)
+		o.logger.Error("failed to get user orders", err)
 		return list, srvErrors.ErrUnexpected
 	}
 
@@ -79,28 +76,6 @@ func (o *Order) List(ctx context.Context) ([]dto.Order, error) {
 	}
 
 	return list, nil
-}
-
-func isOrderNumberValid(number string) bool {
-	if _, err := strconv.ParseUint(number, 10, 64); err != nil {
-		return false
-	}
-
-	sum := 0
-	evenPos := false
-	for i := len(number) - 1; i >= 0; i-- {
-		digit := int(number[i] - '0')
-		if evenPos {
-			digit *= 2
-			if digit > 9 {
-				digit -= 9
-			}
-		}
-		sum += digit
-		evenPos = !evenPos
-	}
-
-	return sum%10 == 0
 }
 
 func (o *Order) checkExistingOrder(ctx context.Context, orderNumber string, userID uint64) error {

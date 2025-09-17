@@ -8,4 +8,6 @@ CREATE TABLE IF NOT EXISTS orders (
     uploaded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_orders_user_id ON orders(user_id);
 COMMIT;

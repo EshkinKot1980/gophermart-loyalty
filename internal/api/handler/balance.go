@@ -26,5 +26,5 @@ func (b *Balance) UserBalance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "oops, something went wrong", http.StatusInternalServerError)
 	}
 
-	writeJSON(balance, "balance", http.StatusOK, w, b.logger)
+	newJSONwriter(w, b.logger).write(balance, "balance", http.StatusOK)
 }
