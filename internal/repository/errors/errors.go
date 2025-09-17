@@ -13,8 +13,9 @@ const (
 )
 
 var (
-	ErrDuplicateKey = errors.New("duplicate key")
-	ErrNotFound     = errors.New("not found")
+	ErrDuplicateKey  = errors.New("duplicate key")
+	ErrNotFound      = errors.New("not found")
+	ErrNoRowsUpdated = errors.New("no rows updated")
 )
 
 func Trasform(err error) error {

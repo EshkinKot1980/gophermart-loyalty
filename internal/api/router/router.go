@@ -17,14 +17,22 @@ type AuthService interface {
 }
 type OrderService = handler.OrderService
 type BalanceService = handler.BalanceService
+type WithdrawalsService = handler.WithdrawalsService
 
-func New(a AuthService, o OrderService, b BalanceService, l Logger) *chi.Mux {
+func New(
+	a AuthService,
+	o OrderService,
+	b BalanceService,
+	w WithdrawalsService,
+	l Logger,
+) *chi.Mux {
 	logger := middleware.NewLogger(l)
 	authorizer := middleware.NewAuthorizer(a)
 
 	authHandler := handler.NewAuth(a)
 	orderHandler := handler.NewOrder(o, l)
 	balanceHandler := handler.NewBalance(b, l)
+	withdrawalsHandler := handler.NewWithdrawals(w, l)
 
 	router := chi.NewRouter()
 	router.Use(logger.Log)
@@ -33,7 +41,6 @@ func New(a AuthService, o OrderService, b BalanceService, l Logger) *chi.Mux {
 		r.Route("/register", func(r chi.Router) {
 			r.Post("/", authHandler.Register)
 		})
-
 		r.Route("/login", func(r chi.Router) {
 			r.Post("/", authHandler.Login)
 		})
@@ -48,6 +55,13 @@ func New(a AuthService, o OrderService, b BalanceService, l Logger) *chi.Mux {
 
 			r.Route("/balance", func(r chi.Router) {
 				r.Get("/", balanceHandler.UserBalance)
+				r.Route("/withdraw", func(r chi.Router) {
+					r.Post("/", withdrawalsHandler.Withdraw)
+				})
+			})
+
+			r.Route("/withdrawals", func(r chi.Router) {
+				r.Get("/", withdrawalsHandler.List)
 			})
 		})
 	})
