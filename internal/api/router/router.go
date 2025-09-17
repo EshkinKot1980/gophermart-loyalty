@@ -36,6 +36,7 @@ func New(
 
 	router := chi.NewRouter()
 	router.Use(logger.Log)
+	router.Use(middleware.GzipDecompress)
 
 	router.Route("/api/user", func(r chi.Router) {
 		r.Route("/register", func(r chi.Router) {
@@ -50,7 +51,10 @@ func New(
 
 			r.Route("/orders", func(r chi.Router) {
 				r.Post("/", orderHandler.Create)
-				r.Get("/", orderHandler.List)
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.GzipCompress)
+					r.Get("/", orderHandler.List)
+				})
 			})
 
 			r.Route("/balance", func(r chi.Router) {
@@ -61,6 +65,7 @@ func New(
 			})
 
 			r.Route("/withdrawals", func(r chi.Router) {
+				r.Use(middleware.GzipCompress)
 				r.Get("/", withdrawalsHandler.List)
 			})
 		})
