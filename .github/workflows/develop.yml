@@ -1,0 +1,24 @@
+name: gophermart unit test
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - develop
+  push:
+    branches:
+      - develop
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    container: golang:1.24
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Run unit tests
+        run: |
+          go test -v ./...
