@@ -12,6 +12,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/accrual/processor"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/api"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/config"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/logger"
@@ -37,7 +38,7 @@ func run(cfg *config.Config) error {
 		return fmt.Errorf("failed to apply migrations to the DB: %w", err)
 	}
 
-	dbPool, err := pgxpool.New(ctx, cfg.DatabaseDSN)
+	dbPool, err := pgxpool.New(context.Background(), cfg.DatabaseDSN)
 	if err != nil {
 		return fmt.Errorf("failed to create DB a connection pool: %w", err)
 	}
@@ -48,6 +49,10 @@ func run(cfg *config.Config) error {
 		return fmt.Errorf("failed to init logger: %w", err)
 	}
 	defer logger.Sync()
+
+	processor := processor.New(cfg.AccrualGfg, dbPool, logger)
+	processor.Run(ctx)
+	defer processor.Stop()
 
 	httpServer := api.NewApp(cfg, dbPool, logger)
 	return httpServer.Run(ctx)

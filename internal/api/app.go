@@ -16,21 +16,17 @@ import (
 )
 
 type App struct {
-	router http.Handler
 	config *config.Config
 	logger *logger.Logger
 	dbPool *pgxpool.Pool
 }
 
 func NewApp(c *config.Config, p *pgxpool.Pool, l *logger.Logger) *App {
-	app := App{config: c, dbPool: p, logger: l}
-	app.initRouter()
-
-	return &app
+	return &App{config: c, dbPool: p, logger: l}
 }
 
 func (a *App) Run(ctx context.Context) error {
-	srv := &http.Server{Addr: a.config.ServerAddr, Handler: a.router}
+	srv := &http.Server{Addr: a.config.ServerAddr, Handler: a.newRouter()}
 	errChan := make(chan error)
 
 	go func() {
@@ -48,17 +44,17 @@ func (a *App) Run(ctx context.Context) error {
 	}
 
 	<-ctx.Done()
-	log.Println("shutting down server gracefully")
+	log.Println("shutting down http server gracefully")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer func() {
-		log.Println("server stopped")
+		log.Println("http server stopped")
 		cancel()
 	}()
 
 	return srv.Shutdown(shutdownCtx)
 }
 
-func (a *App) initRouter() {
+func (a *App) newRouter() http.Handler {
 	userRepository := repository.NewUser(a.dbPool)
 	orderRepository := repository.NewOrder(a.dbPool)
 	balanceRepository := repository.NewBalance(a.dbPool)
@@ -69,7 +65,7 @@ func (a *App) initRouter() {
 	balanceService := service.NewBalance(balanceRepository, a.logger)
 	withdrawalsService := service.NewWithdrawals(withdrawalsRepository, a.logger)
 
-	a.router = router.New(
+	return router.New(
 		authService,
 		orderService,
 		balanceService,
