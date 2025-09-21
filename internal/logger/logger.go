@@ -22,7 +22,7 @@ type ResponseLogData struct {
 	Size   int
 }
 
-// В дальнейшем здесь будет конфигурация зависящая от окружения (environment)
+// В дальнейшем здесь будет конфигурация зависящая от окружения
 func New() (*Logger, error) {
 	l, err := zap.NewDevelopment(zap.AddCallerSkip(1))
 	if err != nil {
@@ -38,6 +38,10 @@ func (l *Logger) Sync() {
 
 func (l *Logger) Error(message string, err error) {
 	l.logger.Error(message, zap.Error(err))
+}
+
+func (l *Logger) Warn(message string, err error) {
+	l.logger.Warn(message, zap.Error(err))
 }
 
 func (l *Logger) RequestInfo(message string, req *RequestLogData, resp *ResponseLogData) {
