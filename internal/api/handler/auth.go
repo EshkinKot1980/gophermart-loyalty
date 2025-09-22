@@ -27,7 +27,7 @@ func (h *Auth) Register(w http.ResponseWriter, r *http.Request) {
 	var credentials dto.Credentials
 
 	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
-		http.Error(w, "invalid credentials format: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid credentials format", http.StatusBadRequest)
 		return
 	}
 
@@ -53,7 +53,7 @@ func (h *Auth) Login(w http.ResponseWriter, r *http.Request) {
 	var credentials dto.Credentials
 
 	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
-		http.Error(w, "invalid credentials format: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid credentials format", http.StatusBadRequest)
 		return
 	}
 

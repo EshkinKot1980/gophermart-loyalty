@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGzipDecompress(t *testing.T) {
+func TestGzip_Decompress(t *testing.T) {
 	var compressedBody bytes.Buffer
 	rawBody := []byte(`{"data": "some data"}`)
 
@@ -69,9 +69,9 @@ func TestGzipDecompress(t *testing.T) {
 				r.Header.Set("Content-Encoding", "gzip")
 			}
 
-			next := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				body, err := io.ReadAll(req.Body)
+				body, err := io.ReadAll(r.Body)
 				require.Nil(t, err, "Request body read")
 				assert.Equal(t, test.want.body, string(body), "Handler request body")
 			})
@@ -101,7 +101,7 @@ func testBodyCompress(t *testing.T, body string) string {
 	return string(res)
 }
 
-func TestGzipCompress(t *testing.T) {
+func TestGzip_Compress(t *testing.T) {
 	bodyJSON := `{"data": "some data"}`
 	bodyJSONgz := testBodyCompress(t, bodyJSON)
 
@@ -171,7 +171,7 @@ func TestGzipCompress(t *testing.T) {
 				r.Header.Set("Accept-Encoding", test.acceptEncoding)
 			}
 
-			next := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", test.contectType)
 				w.WriteHeader(test.statusCode)
 				io.WriteString(w, test.body)
