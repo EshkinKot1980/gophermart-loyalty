@@ -28,14 +28,14 @@ func (h *Withdrawals) Withdraw(w http.ResponseWriter, r *http.Request) {
 	var withdrawals dto.Withdrawals
 
 	if err := json.NewDecoder(r.Body).Decode(&withdrawals); err != nil {
-		http.Error(w, "invalid request format: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid request format", http.StatusBadRequest)
 		return
 	}
 
 	err := h.service.Withdraw(r.Context(), withdrawals)
 	if err != nil {
 		switch {
-		case errors.Is(err, srvErrors.ErrInsufficientFunds):
+		case errors.Is(err, srvErrors.ErrWithdrawInsufficientFunds):
 			http.Error(w, "insufficient funds in the account", http.StatusPaymentRequired)
 		case errors.Is(err, srvErrors.ErrWithdrawInvalidSum):
 			http.Error(w, "sum must be positive", http.StatusUnprocessableEntity)

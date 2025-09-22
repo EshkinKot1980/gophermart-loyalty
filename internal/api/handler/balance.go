@@ -24,6 +24,7 @@ func (b *Balance) UserBalance(w http.ResponseWriter, r *http.Request) {
 	balance, err := b.service.UserBalance(r.Context())
 	if err != nil {
 		http.Error(w, "oops, something went wrong", http.StatusInternalServerError)
+		return
 	}
 
 	newJSONwriter(w, b.logger).write(balance, "balance", http.StatusOK)

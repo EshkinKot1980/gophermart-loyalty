@@ -47,7 +47,7 @@ func (s *Withdrawals) Withdraw(ctx context.Context, w dto.Withdrawals) error {
 	}
 
 	if errors.Is(err, repErrors.ErrNoRowsUpdated) {
-		return srvErrors.ErrInsufficientFunds
+		return srvErrors.ErrWithdrawInsufficientFunds
 	}
 	s.logger.Error("failed to withdraw", err)
 	return srvErrors.ErrUnexpected
