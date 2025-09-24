@@ -63,7 +63,7 @@ func (q *Queue) shutdownHandler(ctx context.Context) {
 
 	<-ctx.Done()
 	close(q.haltSignal)
-	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	select {

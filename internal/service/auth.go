@@ -113,6 +113,9 @@ func (a *Auth) User(ctx context.Context, token string) (entity.User, error) {
 
 	user, err = a.repository.GetByID(ctx, userID)
 	if err != nil {
+		if !errors.Is(err, repErrors.ErrNotFound) {
+			a.logger.Error("failed to find user by id", err)
+		}
 		return user, srvErrors.ErrAuthInvalidToken
 	}
 

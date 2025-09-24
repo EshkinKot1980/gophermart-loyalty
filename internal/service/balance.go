@@ -31,7 +31,7 @@ func (b *Balance) UserBalance(ctx context.Context) (balance dto.Balance, err err
 
 	entity, err := b.repository.GetByUser(ctx, userID)
 	if err != nil {
-		b.logger.Error("failed to get order user balance", err)
+		b.logger.Error("failed to get user balance", err)
 		return balance, errors.ErrUnexpected
 	}
 

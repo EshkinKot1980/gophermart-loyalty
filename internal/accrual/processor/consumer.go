@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	pathPrefix   = "api/orders/"
-	defaultDelay = time.Duration(60 * time.Second)
+	pathPrefix       = "api/orders/"
+	consumersTimeout = time.Duration(60 * time.Second)
 )
 
 var (
@@ -71,7 +71,7 @@ func (c *OrderConsumer) Consume(ctx context.Context, sleepAll chan<- time.Durati
 		if err := order.Validate(number); err == nil {
 			c.service.ProsessOrder(ctx, order)
 		} else {
-			c.logger.Warn("invalid accrual service responce", err)
+			c.logger.Warn("invalid accrual service responce data", err)
 			c.service.MarkOrderForRetry(ctx, number)
 		}
 	case http.StatusNoContent:
@@ -82,10 +82,10 @@ func (c *OrderConsumer) Consume(ctx context.Context, sleepAll chan<- time.Durati
 		default:
 		}
 	case http.StatusInternalServerError:
-		c.logger.Warn("invalid accrual service responce", ErrAccrualInternalError)
+		c.logger.Warn("accrual service internal error", ErrAccrualInternalError)
 	default:
 		c.logger.Error(
-			"invalid accrual service responce",
+			"unexpected accrual service responce code",
 			fmt.Errorf("%w: %d", ErrAccrualUnexpectedStatusCode, code),
 		)
 	}
@@ -97,7 +97,7 @@ func (c *OrderConsumer) parseDelay(resp *resty.Response) time.Duration {
 	v, err := strconv.ParseUint(delay, 10, 64)
 	if err != nil {
 		c.logger.Warn("failed to parse retry-after header", err)
-		return defaultDelay
+		return consumersTimeout
 	}
 
 	return time.Duration(v) * time.Second
