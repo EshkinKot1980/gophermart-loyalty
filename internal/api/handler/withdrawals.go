@@ -42,7 +42,7 @@ func (h *Withdrawals) Withdraw(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, srvErrors.ErrOrderInvalidNumber):
 			http.Error(w, "invalid order number", http.StatusUnprocessableEntity)
 		default:
-			http.Error(w, "oops, something went wrong", http.StatusInternalServerError)
+			http.Error(w, statusText500, http.StatusInternalServerError)
 		}
 
 		return
@@ -54,7 +54,7 @@ func (h *Withdrawals) Withdraw(w http.ResponseWriter, r *http.Request) {
 func (h *Withdrawals) List(w http.ResponseWriter, r *http.Request) {
 	list, err := h.service.List(r.Context())
 	if err != nil {
-		http.Error(w, "oops, something went wrong", http.StatusInternalServerError)
+		http.Error(w, statusText500, http.StatusInternalServerError)
 	}
 
 	if len(list) == 0 {

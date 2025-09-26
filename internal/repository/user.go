@@ -8,14 +8,15 @@ import (
 
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/entity"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/errors"
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/pg"
 )
 
 type User struct {
 	pool *pgxpool.Pool
 }
 
-func NewUser(p *pgxpool.Pool) *User {
-	return &User{pool: p}
+func NewUser(db *pg.DB) *User {
+	return &User{pool: db.Pool()}
 }
 
 func (u *User) GetByID(ctx context.Context, id uint64) (entity.User, error) {

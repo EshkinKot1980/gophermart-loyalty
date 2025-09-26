@@ -51,14 +51,14 @@ func (o *Order) Create(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, srvErrors.ErrOrderInvalidNumber):
 		http.Error(w, "invalid order number", http.StatusUnprocessableEntity)
 	default:
-		http.Error(w, "oops, something went wrong", http.StatusInternalServerError)
+		http.Error(w, statusText500, http.StatusInternalServerError)
 	}
 }
 
 func (o *Order) List(w http.ResponseWriter, r *http.Request) {
 	orders, err := o.service.List(r.Context())
 	if err != nil {
-		http.Error(w, "oops, something went wrong", http.StatusInternalServerError)
+		http.Error(w, statusText500, http.StatusInternalServerError)
 	}
 
 	if len(orders) == 0 {

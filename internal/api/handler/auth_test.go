@@ -177,7 +177,7 @@ func TestAuth_Register(t *testing.T) {
 			want: want{
 				code:   http.StatusInternalServerError,
 				header: "",
-				body:   "oops, something went wrong",
+				body:   statusText500,
 			},
 		},
 	}
@@ -290,7 +290,7 @@ func TestAuth_Login(t *testing.T) {
 			want: want{
 				code:   http.StatusInternalServerError,
 				header: "",
-				body:   "oops, something went wrong",
+				body:   statusText500,
 			},
 		},
 	}

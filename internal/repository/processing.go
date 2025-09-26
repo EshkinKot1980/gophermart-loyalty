@@ -10,6 +10,7 @@ import (
 
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/entity"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/errors"
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/pg"
 )
 
 type Processing struct {
@@ -18,9 +19,9 @@ type Processing struct {
 	retries uint64
 }
 
-func NewProcessing(p *pgxpool.Pool, delaySecond uint64, retryCount uint64) *Processing {
+func NewProcessing(db *pg.DB, delaySecond uint64, retryCount uint64) *Processing {
 	return &Processing{
-		pool:    p,
+		pool:    db.Pool(),
 		delay:   delaySecond,
 		retries: retryCount,
 	}

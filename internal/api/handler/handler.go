@@ -5,6 +5,8 @@ import (
 	"net/http"
 )
 
+const statusText500 = "oops, something went wrong"
+
 type Logger interface {
 	Error(message string, err error)
 }
@@ -22,7 +24,7 @@ func (jw *jsonWriter) write(value any, valueName string, stasusCode int) {
 	body, err := json.Marshal(value)
 	if err != nil {
 		jw.logger.Error("failed to encode "+valueName+" to json", err)
-		http.Error(jw.writer, "oops, something went wrong", http.StatusInternalServerError)
+		http.Error(jw.writer, statusText500, http.StatusInternalServerError)
 		return
 	}
 

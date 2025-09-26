@@ -7,42 +7,33 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/accrual/processor"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/api"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/config"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/logger"
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/pg"
 )
 
 func main() {
-	cfg := config.MustLoad()
-
-	if err := run(cfg); err != nil {
+	if err := run(); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run(cfg *config.Config) error {
+func run() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	m, err := migrate.New("file://db/migrations", cfg.DatabaseDSN)
+	db, err := pg.NewDB(cfg.DatabaseDSN)
 	if err != nil {
-		return fmt.Errorf("failed to get a new migrate instance: %w", err)
+		return fmt.Errorf("failed to init DB: %w", err)
 	}
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("failed to apply migrations to the DB: %w", err)
-	}
-
-	dbPool, err := pgxpool.New(context.Background(), cfg.DatabaseDSN)
-	if err != nil {
-		return fmt.Errorf("failed to create DB a connection pool: %w", err)
-	}
-	defer dbPool.Close()
+	defer db.Close()
 
 	logger, err := logger.New()
 	if err != nil {
@@ -50,10 +41,10 @@ func run(cfg *config.Config) error {
 	}
 	defer logger.Sync()
 
-	processor := processor.New(cfg.AccrualGfg, dbPool, logger)
+	processor := processor.New(cfg.AccrualGfg, db, logger)
 	processor.Run(ctx)
 	defer processor.Stop()
 
-	httpServer := api.NewApp(cfg, dbPool, logger)
+	httpServer := api.NewApp(cfg, db, logger)
 	return httpServer.Run(ctx)
 }

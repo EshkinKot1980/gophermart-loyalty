@@ -6,23 +6,22 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/api/router"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/config"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/logger"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository"
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/pg"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/service"
 )
 
 type App struct {
 	config *config.Config
 	logger *logger.Logger
-	dbPool *pgxpool.Pool
+	db     *pg.DB
 }
 
-func NewApp(c *config.Config, p *pgxpool.Pool, l *logger.Logger) *App {
-	return &App{config: c, dbPool: p, logger: l}
+func NewApp(c *config.Config, db *pg.DB, l *logger.Logger) *App {
+	return &App{config: c, db: db, logger: l}
 }
 
 func (a *App) Run(ctx context.Context) error {
@@ -55,10 +54,10 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func (a *App) newRouter() http.Handler {
-	userRepository := repository.NewUser(a.dbPool)
-	orderRepository := repository.NewOrder(a.dbPool)
-	balanceRepository := repository.NewBalance(a.dbPool)
-	withdrawalsRepository := repository.NewWithdrawals(a.dbPool)
+	userRepository := repository.NewUser(a.db)
+	orderRepository := repository.NewOrder(a.db)
+	balanceRepository := repository.NewBalance(a.db)
+	withdrawalsRepository := repository.NewWithdrawals(a.db)
 
 	authService := service.NewAuth(userRepository, a.logger, a.config.JWTsecret)
 	orderService := service.NewOrder(orderRepository, a.logger)

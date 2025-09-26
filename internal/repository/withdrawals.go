@@ -6,6 +6,7 @@ import (
 
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/entity"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/errors"
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/pg"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -14,8 +15,8 @@ type Withdrawals struct {
 	pool *pgxpool.Pool
 }
 
-func NewWithdrawals(p *pgxpool.Pool) *Withdrawals {
-	return &Withdrawals{pool: p}
+func NewWithdrawals(db *pg.DB) *Withdrawals {
+	return &Withdrawals{pool: db.Pool()}
 }
 
 func (r *Withdrawals) Create(ctx context.Context, w entity.Withdrawals) error {

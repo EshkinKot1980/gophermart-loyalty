@@ -7,14 +7,15 @@ import (
 
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/entity"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/errors"
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/pg"
 )
 
 type Balance struct {
 	pool *pgxpool.Pool
 }
 
-func NewBalance(p *pgxpool.Pool) *Balance {
-	return &Balance{pool: p}
+func NewBalance(db *pg.DB) *Balance {
+	return &Balance{pool: db.Pool()}
 }
 
 func (b *Balance) GetByUser(ctx context.Context, userID uint64) (entity.Balance, error) {

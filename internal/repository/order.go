@@ -9,14 +9,15 @@ import (
 
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/entity"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/errors"
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/pg"
 )
 
 type Order struct {
 	pool *pgxpool.Pool
 }
 
-func NewOrder(p *pgxpool.Pool) *Order {
-	return &Order{pool: p}
+func NewOrder(db *pg.DB) *Order {
+	return &Order{pool: db.Pool()}
 }
 
 func (w *Order) GetByNumber(ctx context.Context, number string) (order entity.Order, err error) {

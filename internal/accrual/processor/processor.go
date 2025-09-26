@@ -4,35 +4,34 @@ import (
 	"context"
 	"log"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/accrual/config"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/logger"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository"
+	"github.com/EshkinKot1980/gophermart-loyalty/internal/repository/pg"
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/service"
 )
 
 type Processor struct {
 	config *config.Config
-	dbPool *pgxpool.Pool
+	db     *pg.DB
 	logger *logger.Logger
-	queue  *Queue
+	queue  *MessageBroker
 }
 
-func New(c *config.Config, p *pgxpool.Pool, l *logger.Logger) *Processor {
-	return &Processor{config: c, dbPool: p, logger: l}
+func New(c *config.Config, db *pg.DB, l *logger.Logger) *Processor {
+	return &Processor{config: c, db: db, logger: l}
 }
 
 func (p *Processor) Run(ctx context.Context) {
 	processRepository := repository.NewProcessing(
-		p.dbPool,
+		p.db,
 		p.config.ProcessDelay,
 		p.config.UnregisteredRetries,
 	)
 	processService := service.NewProcessing(processRepository, p.logger)
 	consumer := NewOrderConsumer(processService, p.logger, p.config.AccrualAddr)
 
-	p.queue = NewQueue(processService, consumer, *p.config)
+	p.queue = NewMessageBroker(processService, consumer, *p.config)
 	p.queue.Run(ctx)
 
 	go func() {
