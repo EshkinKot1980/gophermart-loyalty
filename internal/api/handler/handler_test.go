@@ -70,7 +70,7 @@ func Test_jsonWriter_write(t *testing.T) {
 			want: want{
 				code:   http.StatusInternalServerError,
 				header: "text/plain",
-				body:   "oops, something went wrong",
+				body:   statusText500,
 			},
 		},
 		{

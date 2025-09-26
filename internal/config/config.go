@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -10,16 +11,7 @@ import (
 	accrual "github.com/EshkinKot1980/gophermart-loyalty/internal/accrual/config"
 )
 
-const (
-	defaultAddr         = ":8080"
-	defaultSecret       = "J3gdkl8v3hPJ8" // нужен для того, чтобы приемочные тесты прошли
-	defaultRateLimit    = 10
-	defaultPollInterval = 1
-	defaultProcessDelay = 10
-	defaultRetryCount   = 3
-)
-
-var ErrNotNaturalNumber = errors.New("the value must be a natural number")
+var ErrNotNaturalNumber = errors.New("value must be a natural number")
 
 type Config struct {
 	ServerAddr  string
@@ -28,114 +20,144 @@ type Config struct {
 	AccrualGfg  *accrual.Config
 }
 
-func MustLoad() *Config {
-	var a, d, r, s string
+func Load() (*Config, error) {
+	var (
+		serverAddr   = newStringVal(":8080")
+		dbDSN        = newStringVal("")
+		accrualAddr  = newStringVal("")
+		secret       = newStringVal("J3gdkl8v3hPJ8")
+		rateLimit    = newNaturalVal(10)
+		pollInterval = newNaturalVal(1)
+		processDelay = newNaturalVal(10)
+		retryCount   = newNaturalVal(3)
+	)
 
-	rateLimit := newNatural(defaultRateLimit)
-	pollInterval := newNatural(defaultPollInterval)
-	processDelay := newNatural(defaultProcessDelay)
-	retryCount := newNatural(defaultRetryCount)
+	flagSet := flag.NewFlagSet("", flag.ContinueOnError)
 
-	flag.StringVar(&a, "a", defaultAddr, "address to serve")
-	flag.StringVar(&d, "d", "", "database dsn")
-	flag.StringVar(&r, "r", "", "accrual system address")
-	flag.StringVar(&s, "s", defaultSecret, "jwt secret")
-	flag.Var(rateLimit, "rl", "accrual system rate limit, limit of simultaneous requests")
-	flag.Var(pollInterval, "pi", "accrual system db poll interval in seconds")
-	flag.Var(processDelay, "pd", "accrual system process delay in seconds")
-	flag.Var(retryCount, "rc", "accrual system retry count for unregistered orders")
-	flag.Parse()
+	flagSet.Var(serverAddr, "a", "address to serve")
+	flagSet.Var(dbDSN, "d", "database dsn")
+	flagSet.Var(accrualAddr, "r", "accrual system address")
+	flagSet.Var(secret, "s", "jwt secret")
+	flagSet.Var(rateLimit, "rl", "accrual system rate limit, limit of simultaneous requests")
+	flagSet.Var(pollInterval, "pi", "accrual system db poll interval in seconds")
+	flagSet.Var(processDelay, "pd", "accrual system process delay in seconds")
+	flagSet.Var(retryCount, "rc", "accrual system retry count for unregistered orders")
 
-	envAddr := os.Getenv("RUN_ADDRESS")
-	if envAddr != "" && a == defaultAddr {
-		a = envAddr
+	if err := flagSet.Parse(os.Args[1:]); err != nil {
+		return &Config{}, fmt.Errorf("failed to parse flags")
 	}
 
-	envSecret := os.Getenv("JWT_SECRET")
-	if envSecret != "" && s == defaultSecret {
-		s = envSecret
+	envAddr, ok := os.LookupEnv("RUN_ADDRESS")
+	if ok && !serverAddr.isset {
+		serverAddr.Set(envAddr)
 	}
 
-	envDSN := os.Getenv("DATABASE_URI")
-	if envDSN != "" && d == "" {
-		d = envDSN
-	}
-	if d == "" {
-		log.Fatal("database dsn is required")
+	envSecret, ok := os.LookupEnv("JWT_SECRET")
+	if ok && !secret.isset {
+		secret.Set(envSecret)
 	}
 
-	envAccrualAddr := os.Getenv("ACCRUAL_SYSTEM_ADDRESS")
-	if envAccrualAddr != "" && r == "" {
-		r = envAccrualAddr
+	envDSN, ok := os.LookupEnv("DATABASE_URI")
+	if ok && !dbDSN.isset {
+		dbDSN.Set(envDSN)
 	}
-	if r == "" {
-		log.Fatal("accural system address is required")
+	if dbDSN.value == "" {
+		return &Config{}, fmt.Errorf("database dsn is required")
 	}
 
-	envPollInterval := os.Getenv("ACCRUAL_DB_POLL_INTERVAL")
-	if envPollInterval != "" && !pollInterval.isSet {
+	envAccrualAddr, ok := os.LookupEnv("ACCRUAL_SYSTEM_ADDRESS")
+	if ok && !accrualAddr.isset {
+		accrualAddr.Set(envAccrualAddr)
+	}
+	if accrualAddr.value == "" {
+		return &Config{}, fmt.Errorf("accural system address is required")
+	}
+
+	envPollInterval, ok := os.LookupEnv("ACCRUAL_DB_POLL_INTERVAL")
+	if ok && !pollInterval.isSet {
 		err := pollInterval.Set(envPollInterval)
 		if err != nil {
-			log.Fatal(err)
+			return &Config{}, fmt.Errorf("ACCRUAL_DB_POLL_INTERVAL %w", err)
 		}
 	}
 
-	envProcessDelay := os.Getenv("ACCRUAL_PROCESS_DELAY")
-	if envProcessDelay != "" && !processDelay.isSet {
+	envProcessDelay, ok := os.LookupEnv("ACCRUAL_PROCESS_DELAY")
+	if ok && !processDelay.isSet {
 		err := processDelay.Set(envProcessDelay)
 		if err != nil {
-			log.Fatal(err)
+			return &Config{}, fmt.Errorf("ACCRUAL_PROCESS_DELAY %w", err)
 		}
 	}
 
-	envRetryCount := os.Getenv("ACCRUAL_NOT_REGISTER_RETRY_COUNT")
-	if envRetryCount != "" && !retryCount.isSet {
+	envRetryCount, ok := os.LookupEnv("ACCRUAL_NOT_REGISTER_RETRY_COUNT")
+	if ok && !retryCount.isSet {
 		err := retryCount.Set(envRetryCount)
 		if err != nil {
-			log.Fatal(err)
+			return &Config{}, fmt.Errorf("ACCRUAL_NOT_REGISTER_RETRY_COUNT %w", err)
 		}
 	}
 
-	envRateLimit := os.Getenv("ACCRUAL_RATE_LIMIT")
-	if envRateLimit != "" && !rateLimit.isSet {
+	envRateLimit, ok := os.LookupEnv("ACCRUAL_RATE_LIMIT")
+	if ok && !rateLimit.isSet {
 		err := rateLimit.Set(envRateLimit)
 		if err != nil {
-			log.Fatal(err)
+			return &Config{}, fmt.Errorf("ACCRUAL_RATE_LIMIT %w", err)
 		}
 	}
 
-	return &Config{
-		ServerAddr:  a,
-		DatabaseDSN: d,
-		JWTsecret:   s,
+	config := Config{
+		ServerAddr:  serverAddr.value,
+		DatabaseDSN: dbDSN.value,
+		JWTsecret:   secret.value,
 		AccrualGfg: &accrual.Config{
-			AccrualAddr:         r,
+			AccrualAddr:         accrualAddr.value,
 			RateLimit:           rateLimit.value,
 			PollInterval:        pollInterval.value,
 			ProcessDelay:        processDelay.value,
 			UnregisteredRetries: retryCount.value,
 		},
 	}
+
+	return &config, nil
 }
 
-type natural struct {
+type stringVal struct {
+	value string
+	isset bool
+}
+
+func newStringVal(v string) *stringVal {
+	return &stringVal{value: v}
+}
+
+func (s *stringVal) String() string {
+	return s.value
+}
+
+func (s *stringVal) Set(flagValue string) error {
+	s.value = flagValue
+	s.isset = true
+	return nil
+}
+
+type naturalVal struct {
 	value uint64
 	isSet bool
 }
 
-func newNatural(v uint64) *natural {
+func newNaturalVal(v uint64) *naturalVal {
 	if v == 0 {
 		log.Fatal("attempt to initi a natural number by zero")
 	}
 
-	return &natural{value: v}
+	return &naturalVal{value: v}
 }
 
-func (n *natural) String() string {
+func (n *naturalVal) String() string {
 	return strconv.FormatUint(n.value, 10)
 }
 
-func (n *natural) Set(flagValue string) error {
+func (n *naturalVal) Set(flagValue string) error {
 	v, err := strconv.ParseUint(flagValue, 10, 64)
 	if err != nil {
 		return ErrNotNaturalNumber

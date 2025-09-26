@@ -23,7 +23,7 @@ func NewBalance(srv BalanceService, l Logger) *Balance {
 func (b *Balance) UserBalance(w http.ResponseWriter, r *http.Request) {
 	balance, err := b.service.UserBalance(r.Context())
 	if err != nil {
-		http.Error(w, "oops, something went wrong", http.StatusInternalServerError)
+		http.Error(w, statusText500, http.StatusInternalServerError)
 		return
 	}
 

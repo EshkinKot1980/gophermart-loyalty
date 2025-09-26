@@ -39,7 +39,7 @@ func (h *Auth) Register(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, srvErrors.ErrAuthUserAlreadyExists):
 			http.Error(w, err.Error(), http.StatusConflict)
 		default:
-			http.Error(w, "oops, something went wrong", http.StatusInternalServerError)
+			http.Error(w, statusText500, http.StatusInternalServerError)
 		}
 
 		return
@@ -62,7 +62,7 @@ func (h *Auth) Login(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, srvErrors.ErrAuthInvalidCredentials) {
 			http.Error(w, "", http.StatusUnauthorized)
 		} else {
-			http.Error(w, "oops, something went wrong", http.StatusInternalServerError)
+			http.Error(w, statusText500, http.StatusInternalServerError)
 		}
 		return
 	}

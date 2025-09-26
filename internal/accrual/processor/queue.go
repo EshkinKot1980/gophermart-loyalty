@@ -16,11 +16,12 @@ type Consumer interface {
 	Consume(ctx context.Context, sleepAll chan<- time.Duration, number string)
 }
 
-type Queue struct {
+type MessageBroker struct {
 	producer    Producer
 	consumer    Consumer
 	config      config.Config
-	queue       chan string
+	queueIn     chan string
+	queueOut    <-chan string
 	sleepSignal chan time.Duration
 	haltSignal  chan struct{}
 	stopped     chan struct{}
@@ -28,104 +29,179 @@ type Queue struct {
 	mainCancel  context.CancelFunc
 }
 
-func NewQueue(p Producer, c Consumer, cfg config.Config) *Queue {
-	q := &Queue{
+func NewMessageBroker(p Producer, c Consumer, cfg config.Config) *MessageBroker {
+	b := &MessageBroker{
 		producer:    p,
 		consumer:    c,
 		config:      cfg,
-		queue:       make(chan string),
+		queueIn:     make(chan string, int(cfg.RateLimit)),
+		queueOut:    make(chan string),
 		sleepSignal: make(chan time.Duration, 1),
 	}
 
-	q.mainCtx, q.mainCancel = context.WithCancel(context.Background())
+	b.mainCtx, b.mainCancel = context.WithCancel(context.Background())
+	q := newQueue(b.queueIn, b.sleepSignal)
+	b.queueOut = q.Out()
 
-	return q
+	return b
 }
 
-func (q *Queue) Run(shutdownCxt context.Context) {
-	go q.shutdownHandler(shutdownCxt)
-	go q.runConsumers()
+func (b *MessageBroker) Run(shutdownCxt context.Context) {
+	go b.shutdownHandler(shutdownCxt)
+	go b.runConsumers()
 	time.Sleep(10 * time.Millisecond)
-	go q.process()
+	go b.process()
 }
 
-func (q *Queue) Stop() {
+func (b *MessageBroker) Stop() {
 	select {
-	case <-q.mainCtx.Done():
+	case <-b.mainCtx.Done():
 		time.Sleep(100 * time.Millisecond)
-	case <-q.stopped:
+	case <-b.stopped:
 	}
 
 }
 
-func (q *Queue) shutdownHandler(ctx context.Context) {
-	q.haltSignal = make(chan struct{})
+func (b *MessageBroker) shutdownHandler(ctx context.Context) {
+	b.haltSignal = make(chan struct{})
 
 	<-ctx.Done()
-	close(q.haltSignal)
+	close(b.haltSignal)
+	close(b.queueIn)
+
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	select {
-	case <-q.stopped:
+	case <-b.stopped:
 	case <-timeoutCtx.Done():
-		q.mainCancel()
+		b.mainCancel()
 	}
 }
 
-func (q *Queue) process() {
-	produseInterval := time.Duration(q.config.PollInterval) * time.Second
+func (b *MessageBroker) process() {
+	produseInterval := time.Duration(b.config.PollInterval) * time.Second
 
 	for {
 		select {
-		case <-q.haltSignal:
+		case <-b.haltSignal:
 			return
 		case <-time.After(produseInterval):
 		}
 
-		numbers := q.producer.ListToProccess(q.mainCtx)
+		numbers := b.producer.ListToProccess(b.mainCtx)
 		for _, number := range numbers {
 			select {
-			case <-q.haltSignal:
+			case <-b.haltSignal:
 				return
-			case d := <-q.sleepSignal:
-				time.Sleep(d)
-			default:
+			case b.queueIn <- number:
 			}
-
-			q.queue <- number
 		}
 		time.Sleep(time.Millisecond)
 	}
 }
 
-func (q *Queue) runConsumers() {
+func (b *MessageBroker) runConsumers() {
 	var wg sync.WaitGroup
-	consumersCount := q.config.RateLimit
-	wg.Add(int(consumersCount))
-	q.stopped = make(chan struct{})
+	count := int(b.config.RateLimit)
+	wg.Add(count)
+	b.stopped = make(chan struct{})
 
-	for range consumersCount {
+	for range count {
 		go func() {
-			q.consume()
+			b.consume()
 			wg.Done()
 		}()
 	}
 
 	wg.Wait()
-	close(q.stopped)
+	close(b.stopped)
 }
 
-func (q *Queue) consume() {
-	var number string
+func (b *MessageBroker) consume() {
 	for {
 		select {
-		case <-q.haltSignal:
+		case <-b.haltSignal:
 			return
-		case number = <-q.queue:
+		case number := <-b.queueOut:
+			b.consumer.Consume(b.mainCtx, b.sleepSignal, number)
+		case <-time.After(time.Millisecond):
 		}
+	}
+}
 
-		q.consumer.Consume(q.mainCtx, q.sleepSignal, number)
-		time.Sleep(10 * time.Millisecond)
+type queue struct {
+	in    <-chan string
+	out   chan string
+	sleep <-chan time.Duration
+	mx    *sync.RWMutex
+}
+
+func newQueue(in <-chan string, sleep <-chan time.Duration) *queue {
+	q := &queue{
+		in:    in,
+		out:   make(chan string),
+		sleep: sleep,
+		mx:    &sync.RWMutex{},
+	}
+
+	go q.sleepHandler()
+	go q.process()
+	time.Sleep(10 * time.Millisecond)
+
+	return q
+}
+
+func (q *queue) Out() <-chan string {
+	return q.out
+}
+
+func (q *queue) sleepHandler() {
+	q.mx.Lock()
+	// until := time.Now()
+	until := time.Now().Add(time.Second)
+	interval := 10 * time.Millisecond
+	for {
+		now := time.Now()
+		select {
+		case interval = <-q.sleep:
+			u := now.Add(interval)
+			if until.Before(u) {
+				until = u
+			}
+
+			if q.mx.TryRLock() {
+				q.mx.RUnlock()
+				q.mx.Lock()
+			}
+		case <-time.After(interval):
+			if now.Before(until) {
+				interval = until.Sub(now)
+			} else {
+				interval = 10 * time.Millisecond
+
+				if q.mx.TryRLock() {
+					q.mx.RUnlock()
+				} else {
+					q.mx.Unlock()
+				}
+			}
+		}
+	}
+}
+
+func (q *queue) process() {
+	for {
+		select {
+		case <-time.After(10 * time.Millisecond):
+		case msg, ok := <-q.in:
+			if !ok {
+				return
+			}
+
+			q.mx.RLock()
+			q.out <- msg
+			q.mx.RUnlock()
+		}
 	}
 }
