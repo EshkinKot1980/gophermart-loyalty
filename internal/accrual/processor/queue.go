@@ -158,8 +158,7 @@ func (q *queue) Out() <-chan string {
 
 func (q *queue) sleepHandler() {
 	q.mx.Lock()
-	// until := time.Now()
-	until := time.Now().Add(time.Second)
+	until := time.Now()
 	interval := 10 * time.Millisecond
 	for {
 		now := time.Now()
