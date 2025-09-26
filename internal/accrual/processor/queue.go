@@ -67,7 +67,6 @@ func (b *MessageBroker) shutdownHandler(ctx context.Context) {
 
 	<-ctx.Done()
 	close(b.haltSignal)
-	close(b.queueIn)
 
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -94,10 +93,11 @@ func (b *MessageBroker) process() {
 			select {
 			case <-b.haltSignal:
 				return
-			case b.queueIn <- number:
+			default:
 			}
+
+			b.queueIn <- number
 		}
-		time.Sleep(time.Millisecond)
 	}
 }
 
@@ -159,7 +159,7 @@ func (q *queue) Out() <-chan string {
 func (q *queue) sleepHandler() {
 	q.mx.Lock()
 	until := time.Now()
-	interval := 10 * time.Millisecond
+	interval := time.Millisecond
 	for {
 		now := time.Now()
 		select {
@@ -177,7 +177,7 @@ func (q *queue) sleepHandler() {
 			if now.Before(until) {
 				interval = until.Sub(now)
 			} else {
-				interval = 10 * time.Millisecond
+				interval = time.Millisecond
 
 				if q.mx.TryRLock() {
 					q.mx.RUnlock()
@@ -193,11 +193,7 @@ func (q *queue) process() {
 	for {
 		select {
 		case <-time.After(10 * time.Millisecond):
-		case msg, ok := <-q.in:
-			if !ok {
-				return
-			}
-
+		case msg := <-q.in:
 			q.mx.RLock()
 			q.out <- msg
 			q.mx.RUnlock()

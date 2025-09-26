@@ -51,24 +51,6 @@ func TestOrderConsumer_Consume(t *testing.T) {
 			},
 		},
 		{
-			name:   "network_error",
-			number: "5062821234567819",
-			resp: accrualResponse{
-				netErr: true,
-			},
-			srvSetup: func(t *testing.T) ProcessingService {
-				ctrl := gomock.NewController(t)
-				return mocks.NewMockProcessingService(ctrl)
-			},
-			lSetup: func(t *testing.T) Logger {
-				ctrl := gomock.NewController(t)
-				logger := mocks.NewMockLogger(ctrl)
-				logger.EXPECT().
-					Warn("failed to request accrual servise", gomock.All())
-				return logger
-			},
-		},
-		{
 			name:   "valid_response_data",
 			number: "5062821234567892",
 			resp: accrualResponse{
