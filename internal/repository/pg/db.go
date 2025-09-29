@@ -15,7 +15,7 @@ type DB struct {
 	pool *pgxpool.Pool
 }
 
-func NewDB(dsn string) (*DB, error) {
+func NewDB(ctx context.Context, dsn string) (*DB, error) {
 	db := &DB{}
 
 	m, err := migrate.New("file://db/migrations", dsn)
@@ -26,7 +26,7 @@ func NewDB(dsn string) (*DB, error) {
 		return db, fmt.Errorf("failed to apply migrations to the DB: %w", err)
 	}
 
-	db.pool, err = pgxpool.New(context.Background(), dsn)
+	db.pool, err = pgxpool.New(ctx, dsn)
 	if err != nil {
 		return db, fmt.Errorf("failed to create DB a connection pool: %w", err)
 	}

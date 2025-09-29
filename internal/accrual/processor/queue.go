@@ -35,7 +35,6 @@ func NewMessageBroker(p Producer, c Consumer, cfg config.Config) *MessageBroker 
 		consumer:    c,
 		config:      cfg,
 		queueIn:     make(chan string, int(cfg.RateLimit)),
-		queueOut:    make(chan string),
 		sleepSignal: make(chan time.Duration, 1),
 	}
 
@@ -147,7 +146,6 @@ func newQueue(in <-chan string, sleep <-chan time.Duration) *queue {
 
 	go q.sleepHandler()
 	go q.process()
-	time.Sleep(10 * time.Millisecond)
 
 	return q
 }

@@ -29,7 +29,7 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	db, err := pg.NewDB(cfg.DatabaseDSN)
+	db, err := pg.NewDB(ctx, cfg.DatabaseDSN)
 	if err != nil {
 		return fmt.Errorf("failed to init DB: %w", err)
 	}
