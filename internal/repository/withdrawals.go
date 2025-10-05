@@ -26,11 +26,6 @@ func (r *Withdrawals) Create(ctx context.Context, w entity.Withdrawals) error {
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Exec(ctx, `LOCK TABLE balance IN ROW EXCLUSIVE MODE`)
-	if err != nil {
-		return fmt.Errorf("failed to lock balance table: %w", err)
-	}
-
 	query :=
 		`UPDATE balance 
 			SET balance = balance - $2, debited = debited + $2
