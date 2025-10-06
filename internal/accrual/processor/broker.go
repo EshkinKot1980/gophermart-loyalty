@@ -111,7 +111,9 @@ func (b *MessageBroker) consume(ctx context.Context) {
 			return
 		}
 		retryAfter := b.consumer.Consume(ctx, number)
-		b.sleepConsumers(retryAfter)
+		if retryAfter > 0 {
+			b.sleepConsumers(retryAfter)
+		}
 	}
 }
 
@@ -136,9 +138,6 @@ func (b *MessageBroker) wakeupConsumer() bool {
 }
 
 func (b *MessageBroker) sleepConsumers(d time.Duration) {
-	if d == 0 {
-		return
-	}
 	b.sleepMx.Lock()
 	defer b.sleepMx.Unlock()
 
