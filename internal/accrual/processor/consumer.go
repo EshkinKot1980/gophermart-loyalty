@@ -54,7 +54,7 @@ func NewOrderConsumer(srv ProcessingService, l Logger, serverAddr string) *Order
 	}
 }
 
-func (c *OrderConsumer) Consume(ctx context.Context, sleepAll chan<- time.Duration, number string) {
+func (c *OrderConsumer) Consume(ctx context.Context, number string) (retryAfter time.Duration) {
 	var order dto.Order
 	req := c.client.R().
 		SetContext(ctx).
@@ -77,10 +77,7 @@ func (c *OrderConsumer) Consume(ctx context.Context, sleepAll chan<- time.Durati
 	case http.StatusNoContent:
 		c.service.MarkOrderForRetry(ctx, number)
 	case http.StatusTooManyRequests:
-		select {
-		case sleepAll <- c.parseDelay(resp):
-		default:
-		}
+		retryAfter = c.parseDelay(resp)
 	case http.StatusInternalServerError:
 		c.logger.Warn("accrual service internal error", ErrAccrualInternalError)
 	default:
@@ -89,6 +86,8 @@ func (c *OrderConsumer) Consume(ctx context.Context, sleepAll chan<- time.Durati
 			fmt.Errorf("%w: %d", ErrAccrualUnexpectedStatusCode, code),
 		)
 	}
+
+	return
 }
 
 func (c *OrderConsumer) parseDelay(resp *resty.Response) time.Duration {

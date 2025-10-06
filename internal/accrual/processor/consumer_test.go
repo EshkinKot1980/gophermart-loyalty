@@ -26,11 +26,10 @@ func TestOrderConsumer_Consume(t *testing.T) {
 	tests := []struct {
 		name     string
 		number   string
-		sleep    time.Duration
-		sleeping bool
 		resp     accrualResponse
 		srvSetup func(t *testing.T) ProcessingService
 		lSetup   func(t *testing.T) Logger
+		want     time.Duration
 	}{
 		{
 			name:   "network_error",
@@ -126,25 +125,7 @@ func TestOrderConsumer_Consume(t *testing.T) {
 		{
 			name:   "to_many_request",
 			number: "5062821234567819",
-			sleep:  13 * time.Second,
-			resp: accrualResponse{
-				status:     http.StatusTooManyRequests,
-				retryAfter: "13",
-			},
-			srvSetup: func(t *testing.T) ProcessingService {
-				ctrl := gomock.NewController(t)
-				return mocks.NewMockProcessingService(ctrl)
-			},
-			lSetup: func(t *testing.T) Logger {
-				ctrl := gomock.NewController(t)
-				return mocks.NewMockLogger(ctrl)
-			},
-		},
-		{
-			name:     "to_many_request_duplicate_signal",
-			number:   "5062821234567819",
-			sleep:    13 * time.Second,
-			sleeping: true,
+			want:   13 * time.Second,
 			resp: accrualResponse{
 				status:     http.StatusTooManyRequests,
 				retryAfter: "13",
@@ -161,7 +142,7 @@ func TestOrderConsumer_Consume(t *testing.T) {
 		{
 			name:   "to_many_request_bad_header",
 			number: "5062821234567819",
-			sleep:  consumersTimeout,
+			want:   consumersTimeout,
 			resp: accrualResponse{
 				status:     http.StatusTooManyRequests,
 				retryAfter: "bad_header",
@@ -181,7 +162,6 @@ func TestOrderConsumer_Consume(t *testing.T) {
 		{
 			name:   "accrual_servise_internal_error",
 			number: "5062821234567819",
-			sleep:  consumersTimeout,
 			resp: accrualResponse{
 				status: http.StatusInternalServerError,
 			},
@@ -200,7 +180,6 @@ func TestOrderConsumer_Consume(t *testing.T) {
 		{
 			name:   "unexpected_responce_staus_code",
 			number: "5062821234567819",
-			sleep:  consumersTimeout,
 			resp: accrualResponse{
 				status: http.StatusTeapot,
 			},
@@ -236,23 +215,14 @@ func TestOrderConsumer_Consume(t *testing.T) {
 
 			service := test.srvSetup(t)
 			logger := test.lSetup(t)
-			sleepAll := make(chan time.Duration, 1)
-			defer close(sleepAll)
 
 			consumer := NewOrderConsumer(service, logger, server.URL)
 			if test.resp.netErr {
 				server.Close()
 			}
-			if test.sleeping {
-				sleepAll <- test.sleep
-			}
-			consumer.Consume(context.Background(), sleepAll, test.number)
 
-			select {
-			case sleep := <-sleepAll:
-				assert.Equal(t, test.sleep, sleep, "Too many requests timeout")
-			default:
-			}
+			retryAfter := consumer.Consume(context.Background(), test.number)
+			assert.Equal(t, test.want, retryAfter, "Too many requests timeout")
 		})
 	}
 }
