@@ -92,11 +92,6 @@ func updateOrderForProcess(ctx context.Context, tx pgx.Tx, o entity.Order) (user
 }
 
 func increaseBalance(ctx context.Context, tx pgx.Tx, accrual float64, userID uint64) error {
-	_, err := tx.Exec(ctx, `LOCK TABLE balance IN ROW EXCLUSIVE MODE`)
-	if err != nil {
-		return fmt.Errorf("failed to lock balance table: %w", err)
-	}
-
 	query := `UPDATE balance SET balance = balance + $1 WHERE user_id = $2`
 	tag, err := tx.Exec(ctx, query, accrual, userID)
 	if err != nil {
