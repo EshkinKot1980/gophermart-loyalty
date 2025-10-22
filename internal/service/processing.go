@@ -27,7 +27,7 @@ func NewProcessing(r ProcessingRepository, l Logger) *Processing {
 	return &Processing{reository: r, logger: l}
 }
 
-func (p *Processing) ListToProccess(ctx context.Context) (orderNumbers []string) {
+func (p *Processing) ListForProccess(ctx context.Context) (orderNumbers []string) {
 	statuses := []string{
 		entity.OrderStatusNew,
 		entity.OrderStatusProcessing,

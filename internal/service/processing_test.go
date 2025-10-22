@@ -13,7 +13,7 @@ import (
 	"github.com/EshkinKot1980/gophermart-loyalty/internal/service/mocks"
 )
 
-func TestProcessing_ListToProccess(t *testing.T) {
+func TestProcessing_ListForProccess(t *testing.T) {
 	orderNumbers := []string{"5062821234567892", "5062821234567819"}
 	statuses := []string{
 		entity.OrderStatusNew,
@@ -91,7 +91,7 @@ func TestProcessing_ListToProccess(t *testing.T) {
 			repository := test.rSetup(t)
 			logger := test.lSetup(t)
 			processingService := NewProcessing(repository, logger)
-			list := processingService.ListToProccess(context.Background())
+			list := processingService.ListForProccess(context.Background())
 			assert.Equal(t, test.want, list, "Get orders numbers")
 		})
 	}
